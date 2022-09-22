@@ -71,7 +71,6 @@ def get_service3(url,path):
         print('Error en la descarga: ', err)
 
 if __name__ == "__main__":
-    # user = "elvat"
     user = "solop"
     th1_args = ["https://jsonplaceholder.typicode.com/photos"]
     th2_args = ["https://randomuser.me/api"]
