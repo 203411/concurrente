@@ -25,7 +25,7 @@ class Hilo(Thread):
         self.path = path
     def run(self):
         semaphore.acquire()
-        download(self.id, self.url, self.path)
+        download(self.url, self.path)
         semaphore.release()
         
         
