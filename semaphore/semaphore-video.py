@@ -2,7 +2,7 @@ from threading import Semaphore, Thread
 import pytube 
 semaphore = Semaphore(1)
 
-def download(id, url,path):
+def download(url,path):
     print(f"Descargando video: {url}")
     try:
         pytube.YouTube(url).streams.first().download(path)
