@@ -45,16 +45,16 @@ class Monitor():
             print("Dinero suficiente")
 
 class Tropa():
-    def guerrero(self):
-        return {"type":"guerrero","damage":3,"hp":9,"cost":4,"drop":4,"damage_tower":9}
     def asesino(self):
-        return {"type":"asesino","damage":4,"hp":6,"cost":3,"drop":3,"damage_tower":6}
+        return {"type":"archer","damage":4,"hp":6,"cost":3,"drop":3,"damage_tower":6}
+    def guerrero(self):
+        return {"type":"knight","damage":3,"hp":9,"cost":4,"drop":4,"damage_tower":9}
     def paladin(self):
-        return {"type":"paladin","damage":3,"hp":12,"cost":5,"drop":8,"damage_tower":12}
+        return {"type":"lancer","damage":3,"hp":12,"cost":5,"drop":8,"damage_tower":12}
     def dragon(self):
         return {"type":"dragon","damage":12,"hp":50,"cost":50,"drop":50,"damage_tower":50}
     def random_trop(self):
-        tropas = [self.guerrero(),self.asesino(),self.paladin(),self.dragon()]
+        tropas = [self.asesino(),self.guerrero(),self.paladin(),self.dragon()]
         tropa = choice(tropas)
         return tropa
 
