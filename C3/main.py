@@ -1,8 +1,9 @@
 import pygame
 from random import choice
-from threading import Thread
+from threading import Thread, Lock
 
 pygame.init()
+pygame.mixer.init()
 #paleta de colores
 BG = (201,194,190)
 BLACK = (51,48,33)
@@ -12,14 +13,23 @@ RED = (172,50,50)
 # variables para el juego
 W = 1280
 H = 720
-fps = 8
+fps = 8*4
 
 screen = pygame.display.set_mode((W,H))
 pygame.display.set_caption("Tower Defense")
-
-font = pygame.font.Font("./assets/font/upheavtt.ttf",40)
+ruta_fuente = "./assets/font/upheavtt.ttf"
+font = pygame.font.Font(ruta_fuente,40)
 
 clock = pygame.time.Clock()
+
+coin = [
+    pygame.transform.scale(pygame.image.load('./assets/sprites/coin/coin_1.png'),(48,48)),
+    pygame.transform.scale(pygame.image.load('./assets/sprites/coin/coin_2.png'),(48,48)),
+    pygame.transform.scale(pygame.image.load('./assets/sprites/coin/coin_3.png'),(48,48)),
+    pygame.transform.scale(pygame.image.load('./assets/sprites/coin/coin_4.png'),(48,48))
+]
+index_coin = 0
+guia = pygame.image.load('./assets/sprites/guia.png')
 
 red_team = []
 blue_team = []
@@ -29,16 +39,21 @@ class Game(Thread):
         Thread.__init__(self)
         self.player1 = player1
         self.player2 = player2
+        self.mutex = Lock()
+        self.mutex.acquire()
 
     def give_coins(self):
-        if self.player1.monedas+2 <= 50:
-            self.player1.monedas += 2 
-        if self.player2.monedas+2 <= 50:
-            self.player2.monedas += 2 
-        print("give coins")
-    
+        with self.mutex:
+            if self.player1.monedas+2 <= 50:
+                self.player1.monedas += 2 
+            if self.player2.monedas+2 <= 50:
+                self.player2.monedas += 2 
+
     def run(self):
-        self.give_coins()
+        if player_blue.castle_hp <=0 or player_red.castle_hp <= 0:
+            self.mutex.acquire()
+        else:
+            self.mutex.release()
 
 class Troop(object):
     def __init__(self,x,y,type_troop,team):
@@ -258,11 +273,41 @@ class Player():
         self.automatico = auto
         self.color = team
         self.monedas = monedas
+        self.hp_base = castle_hp
         self.castle_hp = castle_hp
         if self.color == "red":
             self.controles = [pygame.K_u, pygame.K_i, pygame.K_o, pygame.K_p]
         else:
             self.controles = [pygame.K_q, pygame.K_w, pygame.K_e, pygame.K_r]
+        self.ruta = "./assets/sprites/castle/castle_"
+        self.img_castle = [
+            pygame.transform.scale(pygame.image.load(self.ruta+self.color+"1.png"),(336,336)),
+            pygame.transform.scale(pygame.image.load(self.ruta+self.color+"2.png"),(336,336)),
+            pygame.transform.scale(pygame.image.load(self.ruta+self.color+"3.png"),(336,336)),
+            pygame.transform.scale(pygame.image.load(self.ruta+self.color+"4.png"),(336,336)),
+            pygame.transform.scale(pygame.image.load(self.ruta+self.color+"5.png"),(336,336)),
+            pygame.transform.scale(pygame.image.load(self.ruta+self.color+"6.png"),(336,336)),
+            pygame.transform.scale(pygame.image.load(self.ruta+self.color+"7.png"),(336,336)),
+            pygame.transform.scale(pygame.image.load(self.ruta+self.color+"8.png"),(336,336)),
+            pygame.transform.scale(pygame.image.load(self.ruta+self.color+"9.png"),(336,336)),
+            pygame.transform.scale(pygame.image.load(self.ruta+self.color+"10.png"),(336,336)),
+            pygame.transform.scale(pygame.image.load(self.ruta+self.color+"11.png"),(336,336)),
+            pygame.transform.scale(pygame.image.load(self.ruta+self.color+"12.png"),(336,336)),
+            pygame.transform.scale(pygame.image.load(self.ruta+self.color+"13.png"),(336,336))
+        ]
+        self.index = 0
+        self.castle_img = self.img_castle[self.index]
+
+    def anim_castle(self,pos_x,pos_y):
+        self.index+=1
+        if self.index == 12:
+            self.index = 0
+        self.castle_img = self.img_castle[self.index]
+        screen.blit(self.castle_img,(pos_x,pos_y))
+
+    def show_hp_castle(self,pos_x,pos_y,color_team):
+        pygame.draw.rect(screen,BLACK,(pos_x + 95,pos_y*3,150,20))
+        pygame.draw.rect(screen,color_team,(pos_x + 96,pos_y*3+1,(148*self.castle_hp)/self.hp_base,18))
 
     def summon_troop(self, key):
         types_troops = ["archer","knight","lancer","dragon"]
@@ -303,20 +348,26 @@ def calc_damage(any_red, any_blue):
     return damage
 
 def show_stats_player():
-    monedas_red = str(player_red.monedas) + " coins"
-    hp_castle_red = str(player_red.castle_hp) + " hp"
-    monedas_blue = str(player_blue.monedas) + " coins"
-    hp_castle_blue = str(player_blue.castle_hp) + " hp"
+
+    global index_coin
+    if index_coin == 3:
+        index_coin = 0
+    else:
+        index_coin += 1
+
+    monedas_red = str(player_red.monedas)
+    monedas_blue = str(player_blue.monedas)
 
     txt_monedas_r = font.render(monedas_red,False,BLACK)
-    txt_hp_castle_r = font.render(hp_castle_red,False,BLACK)
     txt_monedas_b = font.render(monedas_blue,False,BLACK)
-    txt_hp_castle_b = font.render(hp_castle_blue,False,BLACK)
 
     screen.blit(txt_monedas_r,(980,10))
-    screen.blit(txt_hp_castle_r,(980,50))
+    screen.blit(coin[index_coin],(935,6))
     screen.blit(txt_monedas_b,(270,10))
-    screen.blit(txt_hp_castle_b,(270,50))
+    screen.blit(coin[index_coin],(225,6))
+
+    player_red.show_hp_castle(955,142,RED)
+    player_blue.show_hp_castle(-17,142,BLUE)
 
 def troop_controller(troops):
     for troop in troops:
@@ -340,44 +391,107 @@ def troop_controller(troops):
                 else:
                     troops[troops.index(troop)+1].speed = 4
 
+def progress_bar():
+    font = pygame.font.Font(ruta_fuente,25)
+    txt_progress_bar = font.render("PROGRESS BAR",False,BLACK)
+    screen.blit(txt_progress_bar,(640-txt_progress_bar.get_size()[0]/2,175))
+    pygame.draw.rect(screen,BLACK,(440,200,400,30))
+    if len(red_team)>0:
+        red_p = (((1030-red_team[0].x)*400)/780)-2
+        pygame.draw.rect(screen,RED,(840-red_p,201,red_p,28))
+    if len(blue_team) > 0:
+        real_x = blue_team[0].x+62
+        if blue_team[0].type == "dragon":
+            real_x = blue_team[0].x+124
+        blue_p = ((real_x-250)*400/780)-1
+        pygame.draw.rect(screen,BLUE,(441,201,blue_p,28))
+
 def reload_screen():
     screen.fill(BG)
+    player_red.anim_castle(955,142)
+    player_blue.anim_castle(-17,142)
+    
     troop_controller(red_team)
     troop_controller(blue_team)
-    
-    show_stats_player()
 
-    pygame.draw.rect(screen,(255,0,0),(270,0,1,720)) #inicio de zona de juego
-    pygame.draw.rect(screen,(255,0,0),(1030,0,1,720)) #limite de zona de juego
+    show_stats_player()
+    progress_bar()
+    
+    screen.blit(guia,(W/2-(guia.get_size()[0]/2),450))
+    # pygame.draw.rect(screen,(255,0,0),(250,0,1,720)) #inicio de zona de juego
+    # pygame.draw.rect(screen,(255,0,0),(1030,0,1,720)) #limite de zona de juego
     # pygame.draw.rect(screen,(0,0,255),(640,0,1,720)) #medio de zona de juego    
     pygame.display.update()
 
+def show_main_menu():
+    screen.fill(BG)
+    font = pygame.font.Font(ruta_fuente,80)
+    tower = font.render("TOWER",False,BLACK)
+    defense = font.render("DEFENSE",False,BLACK)
+    font = pygame.font.Font(ruta_fuente,30)
+    press_key = font.render("Press any key to start",False,BLACK)
+
+    screen.blit(tower,(W/2-(tower.get_size()[0]/2),80))
+    screen.blit(defense,(W/2-(defense.get_size()[0]/2),160))
+    screen.blit(press_key,(W/2-(press_key.get_size()[0]/2),400))
+    pygame.display.flip()
+    waiting = True
+    while waiting:
+        clock.tick(fps)
+        for evento in pygame.event.get():
+                # evento de boton de cierre de ventana
+                if evento.type == pygame.QUIT:
+                    pygame.quit()
+                if evento.type == pygame.KEYDOWN:
+                    waiting = False
+
 run = True
-intervalo = 1000
-intervalo2 = 1000
-intervalo3 = 1000
-aux = 0
-alpha_value = 0
-#inicializacion de los jugadores
-player_red = Player(True, "red",25, 50) #(bool automatico,str team,int monedas,int vida)
-player_blue = Player(True, "blue",25, 50)
-#inicializacion de los hilos
-game = Game(player_red,player_blue)
-game.start()
+game_over = True
+
+pygame.mixer.music.load("./assets/sound/theme.mp3","mp3")
+pygame.mixer.music.play(-1)
+
+inicioJuego = 0
 
 while run:
-    if player_red.castle_hp <= 0 or player_blue.castle_hp <= 0:
+    if game_over:
+
+        show_main_menu()
+        pygame.mixer.music.rewind()
+        game_over = False
+
+        intervalo = 1000
+        intervalo2 = 1000
+        intervalo3 = 1000
+        aux = 0
+        alpha_value = 0
+        if inicioJuego == 0:
+            inicioJuego = pygame.time.get_ticks()
+        red_team = []
+        blue_team = []
+        player_red = Player(False, "red",25, 50) #(bool automatico,str team,int monedas,int vida)
+        player_blue = Player(True, "blue",25, 50)
+        game = Game(player_red,player_blue)
+        game.start()
+        pygame.display.update()
+        clock.tick(fps)
+    # else:
+    if player_blue.castle_hp <= 0 or player_red.castle_hp<=0:
+        # Pausar el juego y mostrar pantalla de game over
         for evento in pygame.event.get():
             # evento de boton de cierre de ventana
             if evento.type == pygame.QUIT:
                 run = False
-    # Pausar el juego y mostrar pantalla de game over
+            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_SPACE:
+                inicioJuego=0
+                game_over = True
         txt_game_over = font.render("GAME OVER",False,WHITE)
         txt_winner = font.render(player_blue.color+" Team WON", False, BLUE)
+        replay_txt = font.render("Press Space to replay...",False,WHITE)
         bg_game_over = pygame.Surface((W,H))
         if player_red.castle_hp > 0:
             txt_winner = font.render(player_red.color+" Team WON", False, RED)
-        if alpha_value < 255:
+        if alpha_value <= 255:
             bg_game_over.fill(BLACK)
             bg_game_over.set_alpha(alpha_value)
             screen.blit(bg_game_over,(0,0))
@@ -385,9 +499,12 @@ while run:
             if alpha_value > 50:
                 screen.blit(txt_game_over,(W/2-(txt_game_over.get_size()[0]/2),H/2-(txt_game_over.get_size()[1])))
                 screen.blit(txt_winner,(W/2-(txt_winner.get_size()[0]/2),H/2))
+                screen.blit(replay_txt,(W/2-(replay_txt.get_size()[0]/2),500))
         pygame.display.update()
+        clock.tick(fps)
     else:
-        if pygame.time.get_ticks()/intervalo3 >= 2:
+        
+        if (pygame.time.get_ticks()-inicioJuego)/intervalo3 >= 2:
             game.give_coins()
             intervalo3 += 1000
         for evento in pygame.event.get():
@@ -395,22 +512,22 @@ while run:
             if evento.type == pygame.QUIT:
                 run = False
             #evento de tecla para invocar una tropa
-            if player_red.automatico == False and evento.type == pygame.KEYDOWN and pygame.time.get_ticks()/intervalo >= 1:
+            if player_red.automatico == False and evento.type == pygame.KEYDOWN and (pygame.time.get_ticks()-inicioJuego)/intervalo >= 1:
                 key = evento.key
                 player_red.summon_troop(key)
                 intervalo += 1000
 
-            if player_blue.automatico == False and evento.type == pygame.KEYDOWN and pygame.time.get_ticks()/intervalo2 >= 1:
+            if player_blue.automatico == False and evento.type == pygame.KEYDOWN and (pygame.time.get_ticks()-inicioJuego)/intervalo2 >= 1:
                 key = evento.key
                 player_blue.summon_troop(key)
                 intervalo2 += 1000
                 
         #modo automatico que genera una tropa enemiga cada cierto tiempo
-        if player_red.automatico and pygame.time.get_ticks()/intervalo >= 1:
+        if player_red.automatico and (pygame.time.get_ticks()-inicioJuego)/intervalo >= 1:
             if len(red_team) < 2 or (len(blue_team) >= len(red_team) and len(red_team) < 6):
                 player_red.summon_troop("")
             intervalo += 1000
-        if player_blue.automatico and pygame.time.get_ticks()/intervalo2 >= 1:
+        if player_blue.automatico and (pygame.time.get_ticks()-inicioJuego)/intervalo2 >= 1:
             if len(blue_team) < 2 or (len(red_team) >= len(blue_team) and len(blue_team) < 6):
                 player_blue.summon_troop("")
             intervalo2 += 1000
@@ -428,7 +545,7 @@ while run:
                     blue_team.remove(blue_team[0])
         
         if len(red_team) > 0:
-            if red_team[0].x > 269:
+            if red_team[0].x > 249:
                 red_team[0].speed = 4
             else:
                 red_team[0].speed = 0
@@ -444,10 +561,10 @@ while run:
                 blue_team[0].speed = 0
                 red_team[0].speed = 0
                 if aux == 0:
-                    aux = pygame.time.get_ticks()/1000
+                    aux = (pygame.time.get_ticks()-inicioJuego)/1000
                 blue_team[0].is_attack = True
                 red_team[0].is_attack = True
-                if pygame.time.get_ticks()/1000 >= aux+3:
+                if (pygame.time.get_ticks()-inicioJuego)/1000 >= aux+3:
                     blue_team[0].is_attack = False
                     red_team[0].is_attack = False
                     aux = 0
